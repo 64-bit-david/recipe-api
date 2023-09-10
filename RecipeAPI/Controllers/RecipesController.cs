@@ -8,17 +8,23 @@ namespace RecipeAPI.Controllers
     [Route("api/recipes")]
     public class RecipesController : ControllerBase
     {
+        private readonly RecipeDataStore _recipeDataStore;
+
+        public RecipesController(RecipeDataStore recipeDataStore)
+        {
+            _recipeDataStore = recipeDataStore ?? throw new ArgumentNullException(nameof(recipeDataStore));
+        }
 
         [HttpGet]
         public ActionResult<IEnumerable<RecipeDto>> GetRecipes()
         {
-            return Ok(RecipeDataStore.Current.Recipes);
+            return Ok(_recipeDataStore.Recipes);
         }
 
         [HttpGet("{id}")]
         public ActionResult<RecipeDto> GetRecipe(int id)
         {
-            var recipe = RecipeDataStore.Current.Recipes.FirstOrDefault(r => r.Id == id);
+            var recipe = _recipeDataStore.Recipes.FirstOrDefault(r => r.Id == id);
 
             if(recipe == null)
             {

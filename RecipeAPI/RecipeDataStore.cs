@@ -7,8 +7,9 @@ namespace RecipeAPI
     {
         public List<RecipeDto> Recipes { get; set; }
         public List<IngredientDto> Ingredients { get; set; }
+        public static object Current { get; internal set; }
 
-        public static RecipeDataStore Current { get; } = new RecipeDataStore();
+        //public static RecipeDataStore Current { get; } = new RecipeDataStore();
 
 
         public RecipeDataStore()

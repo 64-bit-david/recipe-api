@@ -9,29 +9,49 @@ namespace RecipeAPI.Controllers
     [ApiController]
     public class IngredientsController : Controller
     {
+        private readonly ILogger<IngredientsController> _logger;
+        private readonly RecipeDataStore _recipeDataStore;
+
+
+        public IngredientsController(ILogger<IngredientsController> logger, RecipeDataStore recipeDataStore)
+        {
+            _recipeDataStore = recipeDataStore ?? throw new ArgumentNullException(nameof(recipeDataStore));
+            _logger = logger ?? throw new ArgumentNullException(nameof(logger));
+        }
+
         [HttpGet]
         public ActionResult<IEnumerable<IngredientDto>> GetIngredients()
         {
-            return Ok(RecipeDataStore.Current.Ingredients);
+            return Ok(_recipeDataStore.Ingredients);
         }
 
 
         [HttpGet("{ingredientId}", Name ="GetIngredient")]
         public ActionResult<IngredientDto>GetIngredient(int ingredientId)
         {
-            var ingredient = RecipeDataStore.Current.Ingredients.FirstOrDefault(i => i.Id == ingredientId);
-            if (ingredient == null)
+            try
             {
-                return NotFound();
-            }
+                var ingredient = _recipeDataStore.Ingredients.FirstOrDefault(i => i.Id == ingredientId);
+                if (ingredient == null)
+                {
+                    _logger.LogInformation($"Exception while getting ingredient with id of {ingredientId}.");
+                    return NotFound();
+                }
 
-            return Ok(ingredient);
+                return Ok(ingredient);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogCritical(
+                    $"Exception while getting ingredient with id of {ingredientId}");
+                return StatusCode(500, "An error happened while handling your request");
+            }
         }
 
         [HttpPost]
         public ActionResult<IngredientDto> CreateIngredient(IngredientForCreationDto ingredient)
         {
-            var maxIngredientId = RecipeDataStore.Current.Ingredients.Max(i => i.Id);
+            var maxIngredientId = _recipeDataStore.Ingredients.Max(i => i.Id);
 
             var newIngredientId = maxIngredientId++;
 
@@ -42,7 +62,7 @@ namespace RecipeAPI.Controllers
                 Description = ingredient.Description
             };
 
-            RecipeDataStore.Current.Ingredients.Add(IngredientToPost);
+            _recipeDataStore.Ingredients.Add(IngredientToPost);
 
             return CreatedAtRoute("GetIngredient", new
             {
@@ -55,7 +75,7 @@ namespace RecipeAPI.Controllers
         [HttpPut("{ingredientid}")]
         public ActionResult<IngredientDto> UpdateIngredient(int ingredientId, IngredientForUpdateDto ingredient)
         {
-            var existingIngredient = RecipeDataStore.Current.Ingredients.FirstOrDefault(i => i.Id == ingredientId);
+            var existingIngredient = _recipeDataStore.Ingredients.FirstOrDefault(i => i.Id == ingredientId);
             if (existingIngredient == null) 
             {
                 return NotFound();
@@ -82,7 +102,7 @@ namespace RecipeAPI.Controllers
         public ActionResult PartiallyUpdateIngredient(
             int ingredientId, JsonPatchDocument<IngredientForUpdateDto> patchDocument)
         {
-            var ingredientFromStore = RecipeDataStore.Current.Ingredients.FirstOrDefault(i => i.Id == ingredientId);
+            var ingredientFromStore = _recipeDataStore.Ingredients.FirstOrDefault(i => i.Id == ingredientId);
             if (ingredientFromStore == null)
             {
                 return NotFound();
@@ -121,13 +141,13 @@ namespace RecipeAPI.Controllers
         [HttpDelete("{ingredientId}")]
         public ActionResult DeleteIngredient(int ingredientId) 
         {
-            var ingredientToDelete = RecipeDataStore.Current.Ingredients.FirstOrDefault(i=> i.Id == ingredientId);
+            var ingredientToDelete = _recipeDataStore.Ingredients.FirstOrDefault(i=> i.Id == ingredientId);
             if(ingredientToDelete == null)
             {
                 return NotFound();
             }
 
-            RecipeDataStore.Current.Ingredients.Remove(ingredientToDelete);
+            _recipeDataStore.Ingredients.Remove(ingredientToDelete);
 
             return NoContent();
 

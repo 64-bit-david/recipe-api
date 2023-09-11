@@ -1,6 +1,9 @@
-﻿using Microsoft.AspNetCore.JsonPatch;
+﻿using AutoMapper;
+using Microsoft.AspNetCore.JsonPatch;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Mvc.Routing;
 using RecipeAPI.Models;
+using RecipeAPI.Services;
 
 namespace RecipeAPI.Controllers
 {
@@ -8,33 +11,48 @@ namespace RecipeAPI.Controllers
     [Route("api/recipes")]
     public class RecipesController : ControllerBase
     {
-        private readonly RecipeDataStore _recipeDataStore;
+        private readonly IRecipeRepository _recipeRepository;
+        private readonly IMapper _mapper;
+        private readonly ILogger<RecipesController> _logger;
 
-        public RecipesController(RecipeDataStore recipeDataStore)
+
+        public RecipesController(IRecipeRepository recipeRepository, IMapper mapper, ILogger<RecipesController> logger)
         {
-            _recipeDataStore = recipeDataStore ?? throw new ArgumentNullException(nameof(recipeDataStore));
+            _recipeRepository = recipeRepository ?? throw new ArgumentNullException(nameof(recipeRepository));
+            _mapper = mapper ?? throw new ArgumentNullException(nameof(mapper));
+            _logger = logger ?? throw new ArgumentNullException(nameof(logger));
+
         }
 
         [HttpGet]
-        public ActionResult<IEnumerable<RecipeDto>> GetRecipes()
+        public async Task<ActionResult<IEnumerable<RecipeWithoutIngredientsDto>>> GetRecipes()
         {
-            return Ok(_recipeDataStore.Recipes);
+            var recipeEntities = await _recipeRepository.GetRecipesAsync();
+            return Ok(_mapper.Map<IEnumerable<RecipeWithoutIngredientsDto>>(recipeEntities));
         }
 
         [HttpGet("{id}")]
-        public ActionResult<RecipeDto> GetRecipe(int id)
+        public async Task<IActionResult> GetRecipe(int id)
         {
-            var recipe = _recipeDataStore.Recipes.FirstOrDefault(r => r.Id == id);
+            var recipeEntity = await _recipeRepository.GetRecipeAsync(id);
 
-            if(recipe == null)
+            if (recipeEntity == null)
             {
                 return NotFound();
             }
 
-            return Ok(recipe);   
+            foreach (var ingredient in recipeEntity.RecipeIngredients)
+            {
+                // You can log or print details about each ingredient here
+                _logger.LogInformation($"Ingredient Id: {ingredient.Ingredient.Id}, Name: {ingredient.Ingredient.Name}");
+            }
+        
+
+
+            return Ok(_mapper.Map<RecipeDto>(recipeEntity));
         }
 
 
-        
+
     }
 }

@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using RecipeAPI;
+using RecipeAPI.Services;
 using Serilog;
 
 Log.Logger = new LoggerConfiguration()
@@ -30,6 +31,9 @@ builder.Services.AddSingleton<RecipeDataStore>();
 
 builder.Services.AddDbContext<RecipeContext>(dbContextOptions =>
     dbContextOptions.UseSqlServer(builder.Configuration["ConnectionStrings:SqlServerConnection"]));
+
+builder.Services.AddScoped<IRecipeRepository, RecipeRepository>();
+builder.Services.AddAutoMapper(AppDomain.CurrentDomain.GetAssemblies());
 
 
 

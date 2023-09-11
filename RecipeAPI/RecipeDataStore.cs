@@ -14,7 +14,7 @@ namespace RecipeAPI
 
         public RecipeDataStore()
         {
-          
+
             Ingredients = new List<IngredientDto>
             {
                 new IngredientDto

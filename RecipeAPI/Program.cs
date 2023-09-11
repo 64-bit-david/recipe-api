@@ -1,4 +1,4 @@
-
+using Microsoft.EntityFrameworkCore;
 using RecipeAPI;
 using Serilog;
 
@@ -27,6 +27,12 @@ builder.Services.AddControllers(options =>
 //builder.Services.AddSwaggerGen();
 
 builder.Services.AddSingleton<RecipeDataStore>();
+
+builder.Services.AddDbContext<RecipeContext>(dbContextOptions =>
+    dbContextOptions.UseSqlServer(builder.Configuration["ConnectionStrings:SqlServerConnection"]));
+
+
+
 
 var app = builder.Build();
 

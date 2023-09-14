@@ -27,7 +27,7 @@ builder.Services.AddControllers(options =>
 //builder.Services.AddEndpointsApiExplorer();
 //builder.Services.AddSwaggerGen();
 
-builder.Services.AddSingleton<RecipeDataStore>();
+//builder.Services.AddSingleton<RecipeDataStore>();
 
 builder.Services.AddDbContext<RecipeContext>(dbContextOptions =>
     dbContextOptions.UseSqlServer(builder.Configuration["ConnectionStrings:SqlServerConnection"]));

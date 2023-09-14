@@ -15,8 +15,8 @@
         }
 
         //initialise new collections empty - avoid null ref issues
-        public ICollection<IngredientDto> Ingredients { get; set; }
-            = new List<IngredientDto>();
+        public ICollection<IngredientWithoutRecipesDto> Ingredients { get; set; }
+            = new List<IngredientWithoutRecipesDto>();
 
     }
 }

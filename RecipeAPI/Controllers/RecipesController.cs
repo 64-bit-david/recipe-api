@@ -43,14 +43,16 @@ namespace RecipeAPI.Controllers
 
             foreach (var ingredient in recipeEntity.RecipeIngredients)
             {
-                // You can log or print details about each ingredient here
                 _logger.LogInformation($"Ingredient Id: {ingredient.Ingredient.Id}, Name: {ingredient.Ingredient.Name}");
             }
-        
-
-
             return Ok(_mapper.Map<RecipeDto>(recipeEntity));
         }
+
+
+
+        //Still need create/upate/delete
+
+       
 
 
 

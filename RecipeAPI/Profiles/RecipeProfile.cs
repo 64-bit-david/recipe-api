@@ -12,8 +12,6 @@ namespace RecipeAPI.Profiles
             CreateMap<Entities.Recipe, Models.RecipeDto>()
                 .ForMember(dest => dest.Ingredients, opt => opt.MapFrom(src => src.RecipeIngredients.Select(ri => ri.Ingredient)));
 
-
-
         }
     }
 }

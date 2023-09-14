@@ -1,7 +1,10 @@
 ﻿using System.Runtime.InteropServices;
+using AutoMapper;
 using Microsoft.AspNetCore.JsonPatch;
 using Microsoft.AspNetCore.Mvc;
+using RecipeAPI.Entities;
 using RecipeAPI.Models;
+using RecipeAPI.Services;
 
 namespace RecipeAPI.Controllers
 {
@@ -10,117 +13,104 @@ namespace RecipeAPI.Controllers
     public class IngredientsController : Controller
     {
         private readonly ILogger<IngredientsController> _logger;
-        private readonly RecipeDataStore _recipeDataStore;
+        private readonly IMapper _mapper;
+        private readonly IRecipeRepository _recipeRepository;
 
-
-        public IngredientsController(ILogger<IngredientsController> logger, RecipeDataStore recipeDataStore)
+        public IngredientsController(ILogger<IngredientsController> logger, 
+            IMapper mapper, IRecipeRepository recipeRepository)
         {
-            _recipeDataStore = recipeDataStore ?? throw new ArgumentNullException(nameof(recipeDataStore));
             _logger = logger ?? throw new ArgumentNullException(nameof(logger));
+            _mapper = mapper ?? throw new ArgumentNullException(nameof(mapper));
+            _recipeRepository = recipeRepository ?? throw new ArgumentNullException(nameof(recipeRepository));
         }
 
         [HttpGet]
-        public ActionResult<IEnumerable<IngredientDto>> GetIngredients()
+        public async Task<ActionResult<IEnumerable<IngredientWithoutRecipesDto>>> GetIngredients()
         {
-            return Ok(_recipeDataStore.Ingredients);
+            var ingredientEntities =   await _recipeRepository.GetIngredientsAsync();
+            return Ok(_mapper.Map<IEnumerable<IngredientWithoutRecipesDto>>(ingredientEntities));
+
         }
 
 
-        [HttpGet("{ingredientId}", Name ="GetIngredient")]
-        public ActionResult<IngredientDto>GetIngredient(int ingredientId)
+        [HttpGet("{ingredientId}", Name = "GetIngredient")]
+        public async Task<ActionResult<IngredientDto>> GetIngredient(int ingredientId)
         {
-            try
-            {
-                var ingredient = _recipeDataStore.Ingredients.FirstOrDefault(i => i.Id == ingredientId);
-                if (ingredient == null)
-                {
-                    _logger.LogInformation($"Exception while getting ingredient with id of {ingredientId}.");
-                    return NotFound();
-                }
+            var ingredientEntity = await _recipeRepository.GetIngredientAsync(ingredientId);
 
-                return Ok(ingredient);
-            }
-            catch (Exception ex)
-            {
-                _logger.LogCritical(
-                    $"Exception while getting ingredient with id of {ingredientId}");
-                return StatusCode(500, "An error happened while handling your request");
-            }
-        }
-
-        [HttpPost]
-        public ActionResult<IngredientDto> CreateIngredient(IngredientForCreationDto ingredient)
-        {
-            var maxIngredientId = _recipeDataStore.Ingredients.Max(i => i.Id);
-
-            var newIngredientId = maxIngredientId++;
-
-            var IngredientToPost = new IngredientDto()
-            {
-                Id = newIngredientId,
-                Name = ingredient.Name,
-                Description = ingredient.Description
-            };
-
-            _recipeDataStore.Ingredients.Add(IngredientToPost);
-
-            return CreatedAtRoute("GetIngredient", new
-            {
-                Id=newIngredientId,
-            },
-            IngredientToPost);
-
-        }
-
-        [HttpPut("{ingredientid}")]
-        public ActionResult<IngredientDto> UpdateIngredient(int ingredientId, IngredientForUpdateDto ingredient)
-        {
-            var existingIngredient = _recipeDataStore.Ingredients.FirstOrDefault(i => i.Id == ingredientId);
-            if (existingIngredient == null) 
+            if(ingredientEntity == null)
             {
                 return NotFound();
             }
 
-            var updatedIngredient = new IngredientDto()
-            {
-                Id = ingredient.Id,
-                Name = ingredient.Name,
-                Description = ingredient.Description
-            };
+            return Ok(_mapper.Map<IngredientDto>(ingredientEntity));
 
-            existingIngredient.Name = ingredient.Name;
-            
-            existingIngredient.Description = ingredient.Description;
+
+        }
+
+        [HttpPost]
+        public async Task<ActionResult<IngredientDto>> CreateIngredient(IngredientForCreationDto ingredient)
+        {
+            var ingredientEntity = _mapper.Map<Entities.Ingredient>(ingredient);
+
+             _recipeRepository.CreateIngredient(ingredientEntity);
+
+            await _recipeRepository.SaveChangesAsync();
+
+            var newIngredientToReturn = _mapper.Map<IngredientDto>(ingredientEntity);
+
+            _logger.LogInformation($"Ingredient entity Id: {ingredientEntity.Id}");
+
+
+            return CreatedAtRoute("GetIngredient", new { ingredientId = newIngredientToReturn.Id }, newIngredientToReturn);
+        }
+
+
+        [HttpPut("{ingredientid}")]
+        public async Task<ActionResult> UpdateIngredient(int ingredientId, IngredientForUpdateDto ingredient)
+        {
+            var ingredientEntity = await _recipeRepository.GetIngredientAsync(ingredientId);
+
+            if (ingredientEntity == null)
+            {
+                return NotFound();
+            }
+
+            _mapper.Map(ingredient, ingredientEntity);
+            //_recipeRepository.UpdateIngredient(ingredientToUpdateEntity);
+
+            await _recipeRepository.SaveChangesAsync();
+
+            //var updatedIngredientDto = _mapper.Map<IngredientForUpdateDto>(ingredientToUpdateEntity);
 
             return NoContent();
-            
+
         }
 
 
 
         [HttpPatch("{ingredientid}")]
-        public ActionResult PartiallyUpdateIngredient(
+        public async Task<ActionResult> PartiallyUpdateIngredient(
             int ingredientId, JsonPatchDocument<IngredientForUpdateDto> patchDocument)
         {
-            var ingredientFromStore = _recipeDataStore.Ingredients.FirstOrDefault(i => i.Id == ingredientId);
-            if (ingredientFromStore == null)
+            var ingredientEntity = await _recipeRepository.GetIngredientAsync(ingredientId);
+
+            if (ingredientEntity == null)
             {
                 return NotFound();
             }
 
-            
-            var ingredientToPatch = new IngredientForUpdateDto()
-            {
-                Name = ingredientFromStore.Name,
-                Description = ingredientFromStore.Description
-            };
 
-            
+            var ingredientToPatch = _mapper.Map<IngredientForUpdateDto>(ingredientEntity);
+
+        
+
+
             //pass modelstate to check that the patch is valid
             patchDocument.ApplyTo(ingredientToPatch, ModelState);
-            
 
-            if(!ModelState.IsValid) 
+
+            if (!ModelState.IsValid)
             {
                 return BadRequest(ModelState);
             }
@@ -132,22 +122,27 @@ namespace RecipeAPI.Controllers
                 return BadRequest(ModelState);
             }
 
-            ingredientFromStore.Name = ingredientToPatch.Name;
-            ingredientFromStore.Description = ingredientToPatch.Description;
+            //_mapper.Map<Ingredient>(ingredientToPatch);
+            _mapper.Map(ingredientToPatch, ingredientEntity);
+
+          
+            await _recipeRepository.SaveChangesAsync();
 
             return NoContent();
         }
 
         [HttpDelete("{ingredientId}")]
-        public ActionResult DeleteIngredient(int ingredientId) 
+        public async Task<ActionResult>DeleteIngredient(int ingredientId)
         {
-            var ingredientToDelete = _recipeDataStore.Ingredients.FirstOrDefault(i=> i.Id == ingredientId);
-            if(ingredientToDelete == null)
+            var ingredientToDelete = await _recipeRepository.GetIngredientAsync(ingredientId);
+            if (ingredientToDelete == null)
             {
                 return NotFound();
             }
 
-            _recipeDataStore.Ingredients.Remove(ingredientToDelete);
+             _recipeRepository.DeleteIngredientAsync(ingredientToDelete);
+
+            await _recipeRepository.SaveChangesAsync();
 
             return NoContent();
 

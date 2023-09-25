@@ -1,4 +1,5 @@
-﻿using Microsoft.EntityFrameworkCore;
+﻿using System.Collections;
+using Microsoft.EntityFrameworkCore;
 using RecipeAPI.Entities;
 using RecipeAPI.Models;
 
@@ -48,7 +49,12 @@ namespace RecipeAPI.Services
 
         }
 
-      
+        public void CreateRecipe(Recipe recipe)
+        {
+            _context.Recipes.Add(recipe);
+        }
+
+
 
         public async Task<bool> SaveChangesAsync()
         {
@@ -68,6 +74,48 @@ namespace RecipeAPI.Services
         public  void DeleteIngredientAsync(Ingredient ingredient)
         {
             _context.Ingredients.Remove(ingredient);
+        }
+
+        public void UpdateRecipe(Recipe recipe)
+        {
+            _context.Recipes.Update(recipe);
+        }
+
+        public async Task<IEnumerable<RecipeIngredient>> GetRecipeIngredientsAsync(int id)
+        {
+            var recipe = await GetRecipeAsync(id);
+
+            return recipe.RecipeIngredients;
+        }
+
+        public void AddRecipeIngredient(RecipeIngredient recipeIngredient)
+        {
+            _context.RecipeIngredients.AddAsync(recipeIngredient);
+        }
+
+        public void RemoveRecipeIngredient(int recipeId, int ingredientId)
+        {
+            //find recipe
+            var recipe = _context.Recipes
+                 .Include(r => r.RecipeIngredients)
+                 .FirstOrDefault(r => r.Id == recipeId);
+
+            if (recipe == null)
+            {
+                throw new InvalidOperationException("Recipe not found");
+            }
+
+            var recipeIngredientToRemove = recipe.RecipeIngredients
+                .FirstOrDefault(ri => ri.IngredientId == ingredientId);
+
+            if (recipeIngredientToRemove == null)
+            {
+                throw new InvalidOperationException("Ingredient not found in the recipe");
+            }
+
+            // Remove the recipe ingredient from the collection
+            recipe.RecipeIngredients.Remove(recipeIngredientToRemove);
+
         }
     }
 }

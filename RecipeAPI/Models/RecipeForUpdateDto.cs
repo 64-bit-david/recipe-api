@@ -1,10 +1,13 @@
 ﻿namespace RecipeAPI.Models
 {
-    public class RecipeForCreationDto
+    public class RecipeForUpdateDto
     {
         public string Name { get; set; }
 
         public string Description { get; set; }
+
+      
+
 
     }
 }

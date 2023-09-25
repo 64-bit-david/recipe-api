@@ -4,7 +4,6 @@ namespace RecipeAPI.Models
 {
     public class IngredientWithoutRecipesDto
     {
-        [Required]
         public int Id { get; set; }
         public string Name { get; set; } = string.Empty;
 

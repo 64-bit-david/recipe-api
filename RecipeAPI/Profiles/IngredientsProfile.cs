@@ -9,6 +9,7 @@ namespace RecipeAPI.Profiles
         public IngredientsProfile()
         {
             CreateMap<Ingredient, IngredientWithoutRecipesDto>(); // Mapping from Ingredient to IngredientWithoutRecipesDto
+            CreateMap<Ingredient, IngredientWithoutRecipesDto>();
             CreateMap<Ingredient, IngredientDto>()
                    .ForMember(dest => dest.Recipes, opt => opt.MapFrom(src => src.RecipeIngredients.Select(ri => ri.Recipe)));
 

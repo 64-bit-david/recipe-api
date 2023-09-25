@@ -57,9 +57,7 @@ namespace RecipeAPI.Controllers
 
             await _recipeRepository.SaveChangesAsync();
 
-            var newIngredientToReturn = _mapper.Map<IngredientDto>(ingredientEntity);
-
-            _logger.LogInformation($"Ingredient entity Id: {ingredientEntity.Id}");
+            var newIngredientToReturn = _mapper.Map<IngredientWithoutRecipesDto>(ingredientEntity);
 
 
             return CreatedAtRoute("GetIngredient", new { ingredientId = newIngredientToReturn.Id }, newIngredientToReturn);
